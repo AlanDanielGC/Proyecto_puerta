@@ -1,98 +1,208 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { createAccessLog, formatAccessLog, getRecentAccessLogs } from '@/lib/database';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const [entries, setEntries] = useState<string[]>([]);
+  const [isOpening, setIsOpening] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState(new Date());
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const nowText = useMemo(() => lastRefresh.toLocaleString(), [lastRefresh]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadRecentEntries = async () => {
+      try {
+        const records = await getRecentAccessLogs(8);
+
+        if (isActive) {
+          setEntries(records.map(formatAccessLog));
+          setLastRefresh(new Date());
+        }
+      } catch {
+        if (isActive) {
+          setEntries([]);
+        }
+      }
+    };
+
+    loadRecentEntries();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  const handleOpenDoor = async () => {
+    try {
+      setIsOpening(true);
+      await createAccessLog('Acceso manual autorizado desde el celular', null, 'apertura');
+
+      const records = await getRecentAccessLogs(8);
+      setEntries(records.map(formatAccessLog));
+      setLastRefresh(new Date());
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'No se pudo registrar la apertura.';
+      Alert.alert('Error', message);
+    } finally {
+      setIsOpening(false);
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.backgroundShape} />
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.title}>Control de Puerta</Text>
+        <Text style={styles.subtitle}>Interfaz principal</Text>
+
+        <View style={styles.statusCard}>
+          <Text style={styles.statusLabel}>Estado del sistema</Text>
+          <Text style={styles.statusValue}>Listo para abrir</Text>
+          <Text style={styles.statusDate}>Actualizado: {nowText}</Text>
+        </View>
+
+        <Pressable
+          style={[styles.openButton, isOpening && styles.openButtonDisabled]}
+          onPress={handleOpenDoor}
+          disabled={isOpening}>
+          <Text style={styles.openButtonText}>{isOpening ? '...' : 'Abrir'}</Text>
+        </Pressable>
+
+        <Text style={styles.sectionTitle}>Registro de entradas recientes</Text>
+        <View style={styles.logCard}>
+          {entries.length === 0 ? (
+            <Text style={styles.emptyLogText}>Aun no hay accesos registrados hoy.</Text>
+          ) : (
+            entries.map((item, index) => (
+              <View key={`${item}-${index}`} style={styles.logRow}>
+                <View style={styles.logDot} />
+                <Text style={styles.logText}>{item}</Text>
+              </View>
+            ))
+          )}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F5FAFF',
+  },
+  backgroundShape: {
+    position: 'absolute',
+    top: -120,
+    right: -80,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: '#D6E9FF',
+    opacity: 0.9,
+  },
+  container: {
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+    paddingTop: 24,
+  },
+  title: {
+    fontSize: 30,
+    fontWeight: '800',
+    color: '#0B3F88',
+  },
+  subtitle: {
+    marginTop: 4,
+    color: '#4A6E95',
+    fontSize: 15,
+    marginBottom: 18,
+  },
+  statusCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#D8E8FF',
+    shadowColor: '#2C6FB7',
+    shadowOpacity: 0.12,
+    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 16,
+    elevation: 3,
+    marginBottom: 24,
+  },
+  statusLabel: {
+    color: '#4A6E95',
+    fontSize: 14,
+  },
+  statusValue: {
+    marginTop: 6,
+    fontSize: 22,
+    color: '#0D63C8',
+    fontWeight: '800',
+  },
+  statusDate: {
+    marginTop: 8,
+    color: '#5D7491',
+  },
+  openButton: {
+    width: 138,
+    height: 138,
+    borderRadius: 69,
+    backgroundColor: '#0D63C8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    shadowColor: '#0D63C8',
+    shadowOpacity: 0.36,
+    shadowOffset: { width: 0, height: 14 },
+    shadowRadius: 20,
+    elevation: 8,
+    marginBottom: 24,
+  },
+  openButtonDisabled: {
+    opacity: 0.7,
+  },
+  openButtonText: {
+    color: '#FFFFFF',
+    fontSize: 26,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+  },
+  sectionTitle: {
+    color: '#0B3F88',
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 10,
+  },
+  logCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderColor: '#D8E8FF',
+    borderWidth: 1,
+    padding: 14,
+    gap: 10,
+  },
+  emptyLogText: {
+    color: '#5D7491',
+    fontSize: 14,
+  },
+  logRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  logDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#0D63C8',
+    marginRight: 10,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  logText: {
+    color: '#1D3657',
+    fontSize: 14,
+    flex: 1,
   },
 });

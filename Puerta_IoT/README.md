@@ -48,3 +48,21 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+## Supabase
+
+This app uses Supabase as its backend.
+
+Set these environment variables before starting Expo:
+
+```bash
+EXPO_PUBLIC_SUPABASE_URL=your-project-url
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+```
+
+Then run the SQL in [supabase/schema.sql](supabase/schema.sql) inside the Supabase SQL editor to create:
+
+- `usuarios` for registered users.
+- `access_logs` for access and audit history.
+
+After loading the SQL, restart Expo so the mobile app can connect and persist every form submission to Supabase.

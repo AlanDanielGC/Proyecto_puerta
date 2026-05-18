@@ -3,31 +3,60 @@ import React from 'react';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: '#0D63C8',
+        tabBarInactiveTintColor: '#7A8AA0',
         headerShown: false,
         tabBarButton: HapticTab,
+        tabBarStyle: {
+          height: 70,
+          paddingTop: 8,
+          paddingBottom: 10,
+          backgroundColor: '#FFFFFF',
+          borderTopColor: '#DBE9FF',
+          borderTopWidth: 1,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '700',
+        },
       }}>
       <Tabs.Screen
-        name="index"
+        name="registro"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: 'Registrar',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={24} name="person.badge.plus" color={color} />
+          ),
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="index"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Ver entradas',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={24} name="list.bullet.rectangle" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="administrar"
+        options={{
+          title: 'Administrar',
+          tabBarIcon: ({ color }) => <IconSymbol size={24} name="person.2.fill" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="historial"
+        options={{
+          title: 'Historial',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={24} name="clock.arrow.circlepath" color={color} />
+          ),
         }}
       />
     </Tabs>
